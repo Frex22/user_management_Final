@@ -41,6 +41,16 @@ class Settings(BaseSettings):
     smtp_username: str = Field(default='your-mailtrap-username', description="Username for SMTP server")
     smtp_password: str = Field(default='your-mailtrap-password', description="Password for SMTP server")
 
+    # Kafka settings
+    kafka_bootstrap_servers: str = Field(default='kafka:9092', description="Kafka bootstrap servers")
+    
+    # Celery settings
+    celery_broker_url: str = Field(default='kafka://kafka:9092', description="Celery broker URL")
+    celery_result_backend: str = Field(default='redis://redis:6379/0', description="Celery result backend")
+    
+    # Email notification settings
+    email_task_retry_count: int = Field(default=3, description="Number of retries for failed email tasks")
+    email_task_retry_delay: int = Field(default=60, description="Delay in seconds between email task retries")
 
     class Config:
         # If your .env file is not in the root directory, adjust the path accordingly.
