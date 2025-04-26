@@ -1,11 +1,17 @@
 from builtins import Exception
+import logging
 from fastapi import FastAPI
 from starlette.responses import JSONResponse
 from starlette.middleware.cors import CORSMiddleware  # Import the CORSMiddleware
 from app.database import Database
 from app.dependencies import get_settings
+from app.events.kafka_producer import close_producer
 from app.routers import user_routes
 from app.utils.api_description import getDescription
+
+# Configure logger
+logger = logging.getLogger(__name__)
+
 app = FastAPI(
     title="User Management",
     description=getDescription(),
@@ -31,7 +37,22 @@ app.add_middleware(
 @app.on_event("startup")
 async def startup_event():
     settings = get_settings()
+    # Initialize database connection
     Database.initialize(settings.database_url, settings.debug)
+    
+    # Log startup of Kafka-based email notification system
+    logger.info("Starting event-driven email notification system with Kafka and Celery")
+    
+    # Import Celery app to ensure tasks are registered
+    # This is needed for Celery worker to discover tasks
+    from app.tasks.celery_app import celery_app
+    logger.info("Celery tasks registered")
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    # Close Kafka producer connection
+    close_producer()
+    logger.info("Kafka producer connection closed")
 
 @app.exception_handler(Exception)
 async def exception_handler(request, exc):
