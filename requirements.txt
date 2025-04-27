@@ -61,3 +61,15 @@ uvicorn==0.29.0
 validators==0.24.0
 markdown2
 pyjwt
+
+# Kafka and Celery dependencies
+celery==5.3.6
+kafka-python==2.0.2
+six==1.16.0
+python-dateutil==2.9.0.post0  # Contains the moves module that kafka-python needs
+confluent-kafka==2.3.0
+redis==5.0.1
+kombu==5.3.4
+vine==5.1.0
+billiard==4.2.0
+amqp==5.2.0
