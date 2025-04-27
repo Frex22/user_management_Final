@@ -71,15 +71,16 @@ async def get_user(user_id: UUID, request: Request, db: AsyncSession = Depends(g
         links=create_user_links(user.id, request)  
     )
 
-# Additional endpoints for update, delete, create, and list users follow a similar pattern, using
-# asynchronous database operations, handling security with OAuth2PasswordBearer, and enhancing response
-# models with dynamic HATEOAS links.
-
-# This approach not only ensures that the API is secure and efficient but also promotes a better client
-# experience by adhering to REST principles and providing self-discoverable operations.
-
 @router.put("/users/{user_id}", response_model=UserResponse, name="update_user", tags=["User Management Requires (Admin or Manager Roles)"])
-async def update_user(user_id: UUID, user_update: UserUpdate, request: Request, db: AsyncSession = Depends(get_db), token: str = Depends(oauth2_scheme), current_user: dict = Depends(require_role(["ADMIN", "MANAGER"]))):
+async def update_user(
+    user_id: UUID, 
+    user_update: UserUpdate, 
+    request: Request, 
+    db: AsyncSession = Depends(get_db), 
+    email_service: EmailService = Depends(get_email_service),
+    token: str = Depends(oauth2_scheme), 
+    current_user: dict = Depends(require_role(["ADMIN", "MANAGER"]))
+):
     """
     Update user information.
 
@@ -87,7 +88,8 @@ async def update_user(user_id: UUID, user_update: UserUpdate, request: Request, 
     - **user_update**: UserUpdate model with updated user information.
     """
     user_data = user_update.model_dump(exclude_unset=True)
-    updated_user = await UserService.update(db, user_id, user_data)
+    # Pass email_service to UserService.update method for event-driven notifications
+    updated_user = await UserService.update(db, user_id, user_data, email_service)
     if not updated_user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
@@ -122,7 +124,6 @@ async def delete_user(user_id: UUID, db: AsyncSession = Depends(get_db), token: 
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
-
 @router.post("/users/", response_model=UserResponse, status_code=status.HTTP_201_CREATED, tags=["User Management Requires (Admin or Manager Roles)"], name="create_user")
 async def create_user(user: UserCreate, request: Request, db: AsyncSession = Depends(get_db), email_service: EmailService = Depends(get_email_service), token: str = Depends(oauth2_scheme), current_user: dict = Depends(require_role(["ADMIN", "MANAGER"]))):
     """
@@ -136,6 +137,7 @@ async def create_user(user: UserCreate, request: Request, db: AsyncSession = Dep
     - user (UserCreate): The user information to create.
     - request (Request): The request object.
     - db (AsyncSession): The database session.
+    - email_service (EmailService): Service for sending email notifications.
 
     Returns:
     - UserResponse: The newly created user's information along with navigation links.
@@ -200,28 +202,22 @@ async def register(user_data: UserCreate, session: AsyncSession = Depends(get_db
     raise HTTPException(status_code=400, detail="Email already exists")
 
 @router.post("/login/", response_model=TokenResponse, tags=["Login and Registration"])
-async def login(form_data: OAuth2PasswordRequestForm = Depends(), session: AsyncSession = Depends(get_db)):
+async def login(
+    form_data: OAuth2PasswordRequestForm = Depends(), 
+    session: AsyncSession = Depends(get_db),
+    email_service: EmailService = Depends(get_email_service)
+):
+    """
+    User login endpoint. On successful authentication, returns an access token.
+    
+    If account is locked or credentials are invalid, appropriate error messages are returned.
+    After multiple failed login attempts, the account will be locked and a notification will be sent.
+    """
     if await UserService.is_account_locked(session, form_data.username):
         raise HTTPException(status_code=400, detail="Account locked due to too many failed login attempts.")
 
-    user = await UserService.login_user(session, form_data.username, form_data.password)
-    if user:
-        access_token_expires = timedelta(minutes=settings.access_token_expire_minutes)
-
-        access_token = create_access_token(
-            data={"sub": user.email, "role": str(user.role.name)},
-            expires_delta=access_token_expires
-        )
-
-        return {"access_token": access_token, "token_type": "bearer"}
-    raise HTTPException(status_code=401, detail="Incorrect email or password.")
-
-@router.post("/login/", include_in_schema=False, response_model=TokenResponse, tags=["Login and Registration"])
-async def login(form_data: OAuth2PasswordRequestForm = Depends(), session: AsyncSession = Depends(get_db)):
-    if await UserService.is_account_locked(session, form_data.username):
-        raise HTTPException(status_code=400, detail="Account locked due to too many failed login attempts.")
-
-    user = await UserService.login_user(session, form_data.username, form_data.password)
+    # Pass email_service to login_user for account locked notifications
+    user = await UserService.login_user(session, form_data.username, form_data.password, email_service)
     if user:
         access_token_expires = timedelta(minutes=settings.access_token_expire_minutes)
 
@@ -235,7 +231,7 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(), session: Async
 
 
 @router.get("/verify-email/{user_id}/{token}", status_code=status.HTTP_200_OK, name="verify_email", tags=["Login and Registration"])
-async def verify_email(user_id: UUID, token: str, db: AsyncSession = Depends(get_db), email_service: EmailService = Depends(get_email_service)):
+async def verify_email(user_id: UUID, token: str, db: AsyncSession = Depends(get_db)):
     """
     Verify user's email with a provided token.
     
@@ -245,3 +241,23 @@ async def verify_email(user_id: UUID, token: str, db: AsyncSession = Depends(get
     if await UserService.verify_email_with_token(db, user_id, token):
         return {"message": "Email verified successfully"}
     raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired verification token")
+
+
+@router.post("/users/{user_id}/unlock", status_code=status.HTTP_200_OK, name="unlock_user", tags=["User Management Requires (Admin or Manager Roles)"])
+async def unlock_user(
+    user_id: UUID, 
+    db: AsyncSession = Depends(get_db),
+    email_service: EmailService = Depends(get_email_service),
+    token: str = Depends(oauth2_scheme), 
+    current_user: dict = Depends(require_role(["ADMIN", "MANAGER"]))
+):
+    """
+    Unlock a locked user account.
+    
+    - **user_id**: UUID of the user account to unlock.
+    """
+    # Pass email_service to unlock_user_account for unlocking notifications
+    success = await UserService.unlock_user_account(db, user_id, email_service)
+    if success:
+        return {"message": "User account unlocked successfully"}
+    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found or account is not locked")

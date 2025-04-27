@@ -68,9 +68,9 @@ class UserService:
             new_user.role = UserRole.ADMIN if user_count == 0 else UserRole.ANONYMOUS            
             if new_user.role == UserRole.ADMIN:
                 new_user.email_verified = True
-
             else:
                 new_user.verification_token = generate_verification_token()
+                # Use the event-driven email service to send verification email
                 await email_service.send_verification_email(new_user)
 
             session.add(new_user)
@@ -81,18 +81,41 @@ class UserService:
             return None
 
     @classmethod
-    async def update(cls, session: AsyncSession, user_id: UUID, update_data: Dict[str, str]) -> Optional[User]:
+    async def update(cls, session: AsyncSession, user_id: UUID, update_data: Dict[str, str], email_service: EmailService = None) -> Optional[User]:
         try:
+            # Get the user before update to detect changes
+            original_user = await cls.get_by_id(session, user_id)
+            if not original_user:
+                logger.error(f"User {user_id} not found during update attempt.")
+                return None
+                
             # validated_data = UserUpdate(**update_data).dict(exclude_unset=True)
             validated_data = UserUpdate(**update_data).model_dump(exclude_unset=True)
 
             if 'password' in validated_data:
                 validated_data['hashed_password'] = hash_password(validated_data.pop('password'))
+                
+            # Track if role or professional status is being updated
+            role_changed = 'role' in validated_data and validated_data['role'] != original_user.role
+            professional_status_changed = 'is_professional' in validated_data and validated_data['is_professional'] != original_user.is_professional
+                
             query = update(User).where(User.id == user_id).values(**validated_data).execution_options(synchronize_session="fetch")
             await cls._execute_query(session, query)
             updated_user = await cls.get_by_id(session, user_id)
-            if updated_user:
+            
+            if updated_user and email_service:
                 session.refresh(updated_user)  # Explicitly refresh the updated user object
+                
+                # Send role upgrade notification if role changed
+                if role_changed:
+                    logger.info(f"Role changed for user {user_id} from {original_user.role} to {updated_user.role}")
+                    await email_service.send_role_upgrade_notification(updated_user, updated_user.role)
+                
+                # Send professional status notification if status changed
+                if professional_status_changed:
+                    logger.info(f"Professional status changed for user {user_id} to {updated_user.is_professional}")
+                    await email_service.send_professional_status_notification(updated_user)
+                    
                 logger.info(f"User {user_id} updated successfully.")
                 return updated_user
             else:
@@ -119,12 +142,12 @@ class UserService:
         return result.scalars().all() if result else []
 
     @classmethod
-    async def register_user(cls, session: AsyncSession, user_data: Dict[str, str], get_email_service) -> Optional[User]:
-        return await cls.create(session, user_data, get_email_service)
+    async def register_user(cls, session: AsyncSession, user_data: Dict[str, str], email_service: EmailService) -> Optional[User]:
+        return await cls.create(session, user_data, email_service)
     
 
     @classmethod
-    async def login_user(cls, session: AsyncSession, email: str, password: str) -> Optional[User]:
+    async def login_user(cls, session: AsyncSession, email: str, password: str, email_service: EmailService = None) -> Optional[User]:
         user = await cls.get_by_email(session, email)
         if user:
             if user.email_verified is False:
@@ -141,6 +164,10 @@ class UserService:
                 user.failed_login_attempts += 1
                 if user.failed_login_attempts >= settings.max_login_attempts:
                     user.is_locked = True
+                    # Send account locked notification via Kafka
+                    if email_service:
+                        await email_service.send_account_locked_notification(user)
+                        logger.info(f"Account locked notification sent for user {user.email}")
                 session.add(user)
                 await session.commit()
         return None
@@ -190,12 +217,18 @@ class UserService:
         return count
     
     @classmethod
-    async def unlock_user_account(cls, session: AsyncSession, user_id: UUID) -> bool:
+    async def unlock_user_account(cls, session: AsyncSession, user_id: UUID, email_service: EmailService = None) -> bool:
         user = await cls.get_by_id(session, user_id)
         if user and user.is_locked:
             user.is_locked = False
             user.failed_login_attempts = 0  # Optionally reset failed login attempts
             session.add(user)
             await session.commit()
+            
+            # Send account unlocked notification via Kafka
+            if email_service:
+                await email_service.send_account_unlocked_notification(user)
+                logger.info(f"Account unlocked notification sent for user {user.email}")
+                
             return True
         return False
