@@ -7,9 +7,9 @@ ENV PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=true \
     PIP_DEFAULT_TIMEOUT=100 \
     PIP_DISABLE_PIP_VERSION_CHECK=on \
-    QR_CODE_DIR=/myapp/qr_codes
+    QR_CODE_DIR=/app/qr_codes
 
-WORKDIR /myapp
+WORKDIR /app
 
 # Update system and install dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -24,7 +24,8 @@ COPY requirements.txt .
 RUN python -m venv /.venv \
     && . /.venv/bin/activate \
     && pip install --upgrade pip \
-    && pip install -r requirements.txt
+    && pip install -r requirements.txt \
+    && pip install --force-reinstall --no-cache-dir kafka-python
 
 # Define a second stage for the runtime, using the same Debian Bookworm slim image
 FROM python:3.12-slim-bookworm as final
@@ -41,10 +42,10 @@ COPY --from=base /.venv /.venv
 ENV PATH="/.venv/bin:$PATH" \
     PYTHONUNBUFFERED=1 \
     PYTHONFAULTHANDLER=1 \
-    QR_CODE_DIR=/myapp/qr_codes
+    QR_CODE_DIR=/app/qr_codes
 
 # Set the working directory
-WORKDIR /myapp
+WORKDIR /app
 
 # Create and switch to a non-root user
 RUN useradd -m myuser
@@ -55,6 +56,3 @@ COPY --chown=myuser:myuser . .
 
 # Inform Docker that the container listens on the specified port at runtime.
 EXPOSE 8000
-
-# Use ENTRYPOINT to specify the executable when the container starts.
-ENTRYPOINT ["uvicorn", "app.main:app", "--reload", "--host", "0.0.0.0", "--port", "8000"]
