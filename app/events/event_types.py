@@ -3,6 +3,15 @@ Event types for the Kafka message broker.
 This module defines constants for Kafka topics used in the email notification system.
 """
 
+from enum import Enum
+
+class EventType(Enum):
+    EMAIL_VERIFICATION = "email_verification"
+    ACCOUNT_LOCKED = "account_locked"
+    ACCOUNT_UNLOCKED = "account_unlocked"
+    ROLE_UPGRADE = "role_upgrade"
+    PROFESSIONAL_STATUS_UPGRADE = "professional_status_upgrade"
+
 # Kafka topics for email notifications
 EMAIL_VERIFICATION = "email_verification"
 ACCOUNT_LOCKED = "account_locked"
