@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   postgres:
     image: postgres:16.2
@@ -33,8 +31,8 @@ services:
   fastapi:
     build: .
     volumes:
-      - ./:/myapp/
-    command: /myapp/scripts/fastapi-entrypoint.sh
+      - ./:/app/
+    command: /app/scripts/fastapi-entrypoint.sh # Corrected filename
     depends_on:
       postgres:
         condition: service_healthy
@@ -103,8 +101,8 @@ services:
   celery_worker:
     build: .
     volumes:
-      - ./:/myapp/
-    command: /myapp/scripts/celery-entrypoint.sh
+      - ./:/app/
+    command: /app/scripts/celery-entrypoint.sh # Corrected filename
     depends_on:
       kafka:
         condition: service_healthy
@@ -140,6 +138,31 @@ services:
       KAFKA_CLUSTERS_0_NAME: local
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
       KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
+    networks:
+      - app-network
+
+  # Test service for running pytest with coverage
+  test:
+    build: .
+    volumes:
+      - ./:/app/
+    command: /app/scripts/run-tests.sh
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      - POSTGRES_DB=myappdb
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_HOST=postgres
+      # Kafka and Celery configuration
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - CELERY_BROKER_URL=kafka://kafka:9092
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
     networks:
       - app-network
 
