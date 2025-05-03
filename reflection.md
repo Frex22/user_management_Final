@@ -16,37 +16,29 @@ The experience of working with Docker, setting up Kafka, and writing unit tests 
 
 ---
 
-### **Links to Issues and Pull Requests**
-
-#### **Quality Assurance (5 QA Issues)**:
-1. [Issue #1: Kafka connection error during event publishing](#)
-2. [Issue #2: Email template rendering failure for account verification](#)
-3. [Issue #3: Celery task retry mechanism not working as expected](#)
-4. [Issue #4: Missing Kafka topic for role upgrade events](#)
-5. [Issue #5: Logging configuration not capturing Celery task errors](#)
 
 #### **Test Coverage Improvement (10 New Tests)**:
-1. [Issue #6: Add test for account verification email event](#)
-2. [Issue #7: Add test for account locked email event](#)
-3. [Issue #8: Add test for role upgrade email event](#)
-4. [Issue #9: Add test for professional status upgrade email event](#)
-5. [Issue #10: Add test for Kafka topic creation](#)
-6. [Issue #11: Add test for Celery task retry mechanism](#)
-7. [Issue #12: Add test for email template rendering](#)
-8. [Issue #13: Add test for Kafka message consumption](#)
-9. [Issue #14: Add test for logging configuration](#)
-10. [Issue #15: Add test for fallback email delivery mechanism](#)
+1.  Add test for account verification email event](#)
+2.  Add test for account locked email event](#)
+3.  Add test for role upgrade email event](#)
+4.  Add test for professional status upgrade email event](#)
+5.  Add test for Kafka topic creation](#)
+6.  Add test for Celery task retry mechanism](#)
+7.  Add test for email template rendering](#)
+8.  Add test for Kafka message consumption](#)
+9.  Add test for logging configuration](#)
+10. Add test for fallback email delivery mechanism](#)
 
 #### **New Feature Implementation (2 Features)**:
-1. [Feature #1: Event-Driven Email Notifications with Celery and Kafka](#)
-2. [Feature #2: Retry Mechanism for Failed Email Deliveries](#)
+1.  Event-Driven Email Notifications with Celery and Kafka
+2.  Retry Mechanism for Failed Email Deliveries
 
 ---
 
 ### **DockerHub Repository**
 
 The project has been successfully deployed to DockerHub. You can find the repository at the following link:  
-[DockerHub Repository Link](#)
+[DockerHub Repository Link](https://hub.docker.com/r/as49/qrcode/tags)
 
 ---
 
