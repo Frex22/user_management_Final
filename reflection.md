@@ -18,16 +18,16 @@ The experience of working with Docker, setting up Kafka, and writing unit tests 
 
 
 #### **Test Coverage Improvement (10 New Tests)**:
-1.  Add test for account verification email event](#)
-2.  Add test for account locked email event](#)
-3.  Add test for role upgrade email event](#)
-4.  Add test for professional status upgrade email event](#)
-5.  Add test for Kafka topic creation](#)
-6.  Add test for Celery task retry mechanism](#)
-7.  Add test for email template rendering](#)
-8.  Add test for Kafka message consumption](#)
-9.  Add test for logging configuration](#)
-10. Add test for fallback email delivery mechanism](#)
+1.  Add test for account verification email event
+2.  Add test for account locked email event
+3.  Add test for role upgrade email event
+4.  Add test for professional status upgrade email event
+5.  Add test for Kafka topic creation
+6.  Add test for Celery task retry mechanism
+7.  Add test for email template rendering
+8.  Add test for Kafka message consumption
+9.  Add test for logging configuration
+10. Add test for fallback email delivery mechanism
 
 #### **New Feature Implementation (2 Features)**:
 1.  Event-Driven Email Notifications with Celery and Kafka
