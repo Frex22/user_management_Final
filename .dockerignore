@@ -1,9 +1,64 @@
-venv
-_*pycache*_
-qr_codes
-*.db
-*.sqlite
-.vscode
-.env
-.coverage
+# Git
+.git
+.gitignore
+
+# Python cache and virtual environments
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/ # Exclude local venv if exists, the one IN the image is /.venv
+
+# Build artifacts
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Pytest cache
+.pytest_cache/
+htmlcov/ # Coverage reports
+
+# IDE / Editor specific
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS specific
+.DS_Store
+Thumbs.db
+
+# Secrets / Config (if not intended to be baked into image)
+# settings/local.py # Example if you have local settings
+
+# Logs
+*.log
+
+# Other
+docker-compose.yml # Usually not needed in the image itself
+Dockerfile
+README.md
+*.md # Or be more specific if some MDs are needed
+project_structure.txt
+alembic.ini # Often configured via env vars or mounted config
+pytest.ini # Test runner config, not needed at runtime
+logging.conf # Often configured via env vars or mounted config
 
