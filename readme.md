@@ -5,7 +5,6 @@ This project is a comprehensive user management system designed to handle user r
 
 ## Features
 - User registration and authentication
-- Role-based access control
 - Event-driven email notifications for:
   - Account verification
   - Account locking/unlocking
