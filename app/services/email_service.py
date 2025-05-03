@@ -45,8 +45,11 @@ class EmailService:
                 "verification_token": user.verification_token
             }
             
+            # Debug log for publish_event call
+            logger.debug(f"Calling publish_event with event_type={event_types.EMAIL_VERIFICATION}, user_data={user_data}")
+            
             # Publish the event to Kafka
-            success = publish_event(event_types.EMAIL_VERIFICATION, user_data)
+            success = await publish_event(event_types.EMAIL_VERIFICATION, user_data)
             
             if success:
                 logger.info(f"Email verification event published for user {user.email}")
